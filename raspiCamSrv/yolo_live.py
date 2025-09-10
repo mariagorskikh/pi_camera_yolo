@@ -58,19 +58,25 @@ class YOLOLiveDetector:
             return False
     
     def detect_and_annotate(self, frame):
-        """Detect objects and annotate frame"""
+        """Detect objects and annotate frame - ALWAYS returns the frame with overlay"""
+        annotated_frame = frame.copy()
+        detections = []
+        
+        # Always add a basic overlay even if YOLO fails
+        self._add_info_overlay(annotated_frame, [])
+        
         if not self.model_initialized:
             if not self.initialize_model():
-                return frame, []
+                # Add "initializing" message
+                cv2.putText(annotated_frame, "YOLO11 Initializing...", (10, 50), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 0), 2)
+                return annotated_frame, []
         
         try:
             # Run detection
             results = self.model(frame, conf=self.confidence_threshold, verbose=False)
             
             # Extract detections
-            detections = []
-            annotated_frame = frame.copy()
-            
             if results[0].boxes is not None:
                 for box in results[0].boxes:
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
@@ -113,14 +119,17 @@ class YOLOLiveDetector:
                 self.detection_stats['frame_count'] = 0
                 self.detection_stats['last_detection_time'] = current_time
             
-            # Add info overlay
+            # Always add info overlay (replaces the basic one added earlier)
             self._add_info_overlay(annotated_frame, detections)
             
             return annotated_frame, detections
             
         except Exception as e:
             logger.error(f"Detection error: {e}")
-            return frame, []
+            # Even on error, return the frame with error message
+            cv2.putText(annotated_frame, f"YOLO11 Error: {str(e)[:50]}", (10, 50), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+            return annotated_frame, []
     
     def _get_class_color(self, class_name):
         """Get consistent color for object class"""
@@ -163,6 +172,8 @@ class YOLOLiveDetector:
             if len(detections) > 3:
                 object_names.append(f"...and {len(detections)-3} more")
             info_lines.append("Detected: " + ", ".join(object_names))
+        else:
+            info_lines.append("No objects detected - monitoring...")
         
         for i, line in enumerate(info_lines):
             cv2.putText(frame, line, (10, 20 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
@@ -224,7 +235,7 @@ def stats():
     return jsonify(yolo_detector.detection_stats)
 
 def generate_yolo_frames():
-    """Generate frames with YOLO11 detection"""
+    """Generate frames with YOLO11 detection - ALWAYS shows video feed"""
     camera = Camera()
     
     # Ensure live stream is started
@@ -232,13 +243,16 @@ def generate_yolo_frames():
     cfg = CameraCfg()
     if not cfg.serverConfig.isLiveStream:
         camera.startLiveStream()
+        time.sleep(1)  # Give camera time to start
+    
+    logger.info("YOLO video stream started")
     
     while True:
         try:
             # Get frame from camera using the same method as Live page
             frame_bytes = camera.get_frame()
             if frame_bytes is None:
-                time.sleep(0.1)
+                time.sleep(0.05)  # Shorter sleep for better responsiveness
                 continue
             
             # Convert MJPEG bytes to numpy array
@@ -250,25 +264,36 @@ def generate_yolo_frames():
                 frame = frame_bytes
             
             if frame is None:
-                time.sleep(0.1)
+                time.sleep(0.05)
                 continue
             
-            # Run YOLO11 detection and annotation
+            # ALWAYS run YOLO11 detection and annotation (even if no objects detected)
             annotated_frame, detections = yolo_detector.detect_and_annotate(frame)
             
-            # Encode frame as JPEG
+            # ALWAYS encode and yield frame (never skip)
             ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            if not ret:
-                time.sleep(0.1)
-                continue
+            if ret:
+                frame_bytes_out = buffer.tobytes()
                 
-            frame_bytes = buffer.tobytes()
-            
-            # Yield frame in multipart format
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                # Yield frame in multipart format
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes_out + b'\r\n')
+            else:
+                logger.error("Failed to encode frame")
+                time.sleep(0.05)
                    
         except Exception as e:
             logger.error(f"Error in YOLO frame generation: {e}")
+            # Even on error, try to show a basic frame
+            try:
+                # Create a simple error frame
+                error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+                cv2.putText(error_frame, "YOLO11 Stream Error", (200, 240), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                ret, buffer = cv2.imencode('.jpg', error_frame)
+                if ret:
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            except:
+                pass
             time.sleep(0.1)
-            continue
