@@ -227,20 +227,30 @@ def generate_yolo_frames():
     """Generate frames with YOLO11 detection"""
     camera = Camera()
     
+    # Ensure live stream is started
+    from raspiCamSrv.camCfg import CameraCfg
+    cfg = CameraCfg()
+    if not cfg.serverConfig.isLiveStream:
+        camera.startLiveStream()
+    
     while True:
         try:
-            # Get frame from camera
-            frame = camera.get_frame()
-            if frame is None:
+            # Get frame from camera using the same method as Live page
+            frame_bytes = camera.get_frame()
+            if frame_bytes is None:
+                time.sleep(0.1)
                 continue
             
-            # Convert from bytes to numpy array if needed
-            if isinstance(frame, bytes):
-                # Decode MJPEG frame
-                frame_array = np.frombuffer(frame, dtype=np.uint8)
+            # Convert MJPEG bytes to numpy array
+            if isinstance(frame_bytes, bytes):
+                # Decode MJPEG frame to numpy array
+                frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
                 frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+            else:
+                frame = frame_bytes
             
             if frame is None:
+                time.sleep(0.1)
                 continue
             
             # Run YOLO11 detection and annotation
@@ -249,6 +259,7 @@ def generate_yolo_frames():
             # Encode frame as JPEG
             ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             if not ret:
+                time.sleep(0.1)
                 continue
                 
             frame_bytes = buffer.tobytes()
