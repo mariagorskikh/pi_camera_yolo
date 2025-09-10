@@ -1962,6 +1962,15 @@
                 document.getElementById("motionthreshold").disabled = true;
                 document.getElementById("backsubmodel").disabled = false;
                 document.getElementById("videobboxes").disabled = false;
+            }
+            if (val == "5"){
+                // YOLO11 Object Detection
+                document.getElementById("msdthreshold").disabled = true;
+                document.getElementById("bboxthreshold").disabled = true;
+                document.getElementById("nmsthreshold").disabled = true;
+                document.getElementById("motionthreshold").disabled = true;
+                document.getElementById("backsubmodel").disabled = true;
+                document.getElementById("videobboxes").disabled = false;
             }            
         }
 

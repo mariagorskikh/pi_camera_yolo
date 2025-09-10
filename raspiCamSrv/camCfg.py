@@ -397,7 +397,7 @@ class Action():
         return act
 
 class TriggerConfig():
-    motionDetectAlgos = ["Mean Square Diff", "Frame Differencing", "Optical Flow", "Background Subtraction"]
+    motionDetectAlgos = ["Mean Square Diff", "Frame Differencing", "Optical Flow", "Background Subtraction", "YOLO11 Object Detection"]
     videoRecorders = ["Normal", "Circular"]
     backgroundSubtractionModels = ["MOG2", "KNN"]
     def __init__(self):
