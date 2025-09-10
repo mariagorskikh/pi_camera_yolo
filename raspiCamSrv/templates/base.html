@@ -76,6 +76,11 @@
                 {% else %}
                 <a href="{{ url_for('webcam.webcam') }}" class="w3-bar-item w3-button" id='cambtn' onclick="openMenu('cambtn')">Cam</a>
                 {% endif %}
+                {% if sc.curMenu == "yolo" %}
+                <a href="{{ url_for('yolo_live.index') }}" class="w3-bar-item w3-button w3-dark-grey" id='yolobtn' onclick="openMenu('yolobtn')">🎯 YOLO</a>
+                {% else %}
+                <a href="{{ url_for('yolo_live.index') }}" class="w3-bar-item w3-button" id='yolobtn' onclick="openMenu('yolobtn')">🎯 YOLO</a>
+                {% endif %}
                 {% if sc.curMenu == "console" %}
                 <a href="{{ url_for('console.console') }}" class="w3-bar-item w3-button w3-dark-grey" id='consolebtn' onclick="openMenu('consolebtn')">Console</a>
                 {% else %}

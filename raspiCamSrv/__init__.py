@@ -57,6 +57,8 @@ def create_app(test_config=None):
         logging.getLogger("raspiCamSrv.sun"),
         logging.getLogger("raspiCamSrv.api"),
         logging.getLogger("raspiCamSrv.stereoCam"),
+        logging.getLogger("raspiCamSrv.yolo_live"),
+        logging.getLogger("raspiCamSrv.motionAlgoYOLO11"),
     ):
         logger.setLevel(logging.ERROR)
 
@@ -228,6 +230,10 @@ def create_app(test_config=None):
 
     from . import console
     app.register_blueprint(console.bp)
+
+    # Register YOLO11 live detection blueprint
+    from . import yolo_live
+    app.register_blueprint(yolo_live.bp)
 
     if sc.useAPI == True:
         from . import api

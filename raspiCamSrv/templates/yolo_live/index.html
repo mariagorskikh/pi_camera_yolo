@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}YOLO11 Live Detection{% endblock %}
+
+{% block content %}
+
+<style>
+    .yolo-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .video-container {
+        position: relative;
+        background: #000;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+    }
+    
+    .video-stream {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    
+    .controls-panel {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .stats-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #4CAF50;
+    }
+    
+    .stat-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #7f8c8d;
+        font-size: 0.9em;
+        text-transform: uppercase;
+    }
+    
+    .yolo-status {
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+    
+    .yolo-available {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .yolo-unavailable {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .control-group {
+        margin-bottom: 15px;
+    }
+    
+    .control-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .control-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .btn-yolo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.2s;
+    }
+    
+    .btn-yolo:hover {
+        transform: translateY(-2px);
+    }
+    
+    .legend {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .legend-item {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 15px;
+        margin-bottom: 5px;
+    }
+    
+    .color-box {
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        margin-right: 8px;
+        border: 1px solid #ddd;
+    }
+</style>
+
+<div class="yolo-container">
+    <h1>🎯 YOLO11 Live Object Detection</h1>
+    
+    {% if yolo_available %}
+        <div class="yolo-status yolo-available">
+            ✅ YOLO11 is available and ready for real-time object detection!
+        </div>
+    {% else %}
+        <div class="yolo-status yolo-unavailable">
+            ❌ YOLO11 is not available. Please install ultralytics: pip install ultralytics
+        </div>
+    {% endif %}
+    
+    {% if yolo_available %}
+        <!-- Live Video Stream -->
+        <div class="video-container">
+            <img src="{{ url_for('yolo_live.video_feed') }}" class="video-stream" alt="YOLO11 Live Detection">
+        </div>
+        
+        <!-- Real-time Statistics -->
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-value" id="objects-count">0</div>
+                <div class="stat-label">Objects Detected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="fps-count">0</div>
+                <div class="stat-label">FPS</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="frame-count">0</div>
+                <div class="stat-label">Frames Processed</div>
+            </div>
+        </div>
+        
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+            <h3>🛠️ Detection Controls</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <div class="control-group">
+                        <a href="{{ url_for('yolo_live.settings') }}" class="btn-yolo">⚙️ Detection Settings</a>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="toggleFullscreen()" class="btn-yolo">🖥️ Toggle Fullscreen</button>
+                    </div>
+                </div>
+                <div>
+                    <div class="control-group">
+                        <button onclick="takeScreenshot()" class="btn-yolo">📸 Save Screenshot</button>
+                    </div>
+                    <div class="control-group">
+                        <button onclick="refreshStats()" class="btn-yolo">🔄 Refresh Stats</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Object Class Legend -->
+        <div class="legend">
+            <h3>🎨 Object Classes & Colors</h3>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(255, 0, 0);"></div>
+                <span>Person</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(0, 255, 0);"></div>
+                <span>Vehicles (Car, Truck)</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(255, 255, 0);"></div>
+                <span>Bikes & Motorcycles</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(0, 255, 255);"></div>
+                <span>Bus</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(255, 0, 255);"></div>
+                <span>Cat</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(255, 128, 0);"></div>
+                <span>Dog</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(128, 255, 0);"></div>
+                <span>Bird</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background-color: rgb(128, 128, 128);"></div>
+                <span>Other Objects</span>
+            </div>
+        </div>
+        
+    {% endif %}
+</div>
+
+<script>
+    // Real-time statistics updates
+    function updateStats() {
+        fetch('{{ url_for("yolo_live.stats") }}')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('objects-count').textContent = data.objects_detected || 0;
+                document.getElementById('fps-count').textContent = (data.fps || 0).toFixed(1);
+                document.getElementById('frame-count').textContent = data.frame_count || 0;
+            })
+            .catch(error => console.log('Stats update error:', error));
+    }
+    
+    // Update stats every 2 seconds
+    setInterval(updateStats, 2000);
+    
+    // Initial stats load
+    updateStats();
+    
+    function toggleFullscreen() {
+        const videoElement = document.querySelector('.video-stream');
+        if (videoElement.requestFullscreen) {
+            videoElement.requestFullscreen();
+        } else if (videoElement.webkitRequestFullscreen) {
+            videoElement.webkitRequestFullscreen();
+        } else if (videoElement.msRequestFullscreen) {
+            videoElement.msRequestFullscreen();
+        }
+    }
+    
+    function takeScreenshot() {
+        const video = document.querySelector('.video-stream');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = video.naturalWidth;
+        canvas.height = video.naturalHeight;
+        ctx.drawImage(video, 0, 0);
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.download = 'yolo11_detection_' + new Date().toISOString().slice(0,19).replace(/:/g, '-') + '.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    }
+    
+    function refreshStats() {
+        updateStats();
+        // Visual feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Refreshed!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 1000);
+    }
+</script>
+
+{% endblock %}

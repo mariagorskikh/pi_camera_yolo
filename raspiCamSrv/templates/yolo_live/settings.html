@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}YOLO11 Detection Settings{% endblock %}
+
+{% block content %}
+
+<style>
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .settings-card {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-label {
+        display: block;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+    
+    .form-input:focus {
+        outline: none;
+        border-color: #667eea;
+    }
+    
+    .form-checkbox {
+        margin-right: 8px;
+        transform: scale(1.2);
+    }
+    
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+    }
+    
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-left: 10px;
+    }
+    
+    .current-settings {
+        background: #f8f9fa;
+        border-left: 4px solid #28a745;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .slider-container {
+        position: relative;
+        margin: 20px 0;
+    }
+    
+    .slider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: #ddd;
+        outline: none;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+    
+    .slider:hover {
+        opacity: 1;
+    }
+    
+    .slider-value {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #667eea;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .info-box {
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .info-box h4 {
+        color: #1976d2;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="settings-container">
+    <h1>⚙️ YOLO11 Detection Settings</h1>
+    
+    {% if not yolo_available %}
+        <div class="alert alert-danger">
+            <strong>❌ YOLO11 Not Available</strong><br>
+            Please install ultralytics package: <code>pip install ultralytics</code>
+        </div>
+    {% else %}
+        
+        <!-- Current Settings Display -->
+        <div class="current-settings">
+            <h4>📊 Current Settings</h4>
+            <p><strong>Confidence Threshold:</strong> {{ detector.confidence_threshold }}</p>
+            <p><strong>Show Labels:</strong> {{ "Yes" if detector.show_labels else "No" }}</p>
+            <p><strong>Show Confidence:</strong> {{ "Yes" if detector.show_confidence else "No" }}</p>
+            <p><strong>Model Status:</strong> {{ "Initialized" if detector.model_initialized else "Not Initialized" }}</p>
+        </div>
+        
+        <!-- Settings Form -->
+        <div class="settings-card">
+            <h3>🎛️ Detection Parameters</h3>
+            
+            <form method="post">
+                <div class="form-group">
+                    <label for="confidence" class="form-label">
+                        Confidence Threshold
+                        <small style="color: #6c757d;">(Higher = more accurate, fewer detections)</small>
+                    </label>
+                    <div class="slider-container">
+                        <input type="range" 
+                               id="confidence" 
+                               name="confidence" 
+                               class="slider" 
+                               min="0.1" 
+                               max="0.9" 
+                               step="0.1" 
+                               value="{{ detector.confidence_threshold }}"
+                               oninput="updateSliderValue(this, 'confidence-value')">
+                        <div class="slider-value" id="confidence-value">{{ detector.confidence_threshold }}</div>
+                    </div>
+                    <small style="color: #6c757d;">
+                        Current: {{ detector.confidence_threshold }} 
+                        (0.1 = detect everything, 0.9 = only very confident detections)
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <h4>📺 Display Options</h4>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" 
+                               name="show_labels" 
+                               class="form-checkbox"
+                               {{ "checked" if detector.show_labels else "" }}>
+                        <span>Show object class labels on video</span>
+                    </label>
+                    
+                    <label class="checkbox-label">
+                        <input type="checkbox" 
+                               name="show_confidence" 
+                               class="form-checkbox"
+                               {{ "checked" if detector.show_confidence else "" }}>
+                        <span>Show confidence scores with labels</span>
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">💾 Save Settings</button>
+                    <a href="{{ url_for('yolo_live.index') }}" class="btn-secondary">🔙 Back to Live View</a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Information Box -->
+        <div class="info-box">
+            <h4>💡 Tips for Best Results</h4>
+            <ul>
+                <li><strong>Confidence 0.3-0.5:</strong> Good for general object detection</li>
+                <li><strong>Confidence 0.5-0.7:</strong> Balanced accuracy and detection rate</li>
+                <li><strong>Confidence 0.7-0.9:</strong> High accuracy, fewer false positives</li>
+                <li><strong>Good lighting:</strong> Improves detection accuracy significantly</li>
+                <li><strong>Stable camera:</strong> Reduces motion blur for better detection</li>
+            </ul>
+        </div>
+        
+        <!-- Model Information -->
+        <div class="settings-card">
+            <h3>🤖 Model Information</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <p><strong>Model:</strong> YOLO11n (Nano)</p>
+                    <p><strong>Classes:</strong> 80 COCO classes</p>
+                    <p><strong>Input Size:</strong> 640x640</p>
+                </div>
+                <div>
+                    <p><strong>Performance:</strong> ~15-20 FPS on Pi 5</p>
+                    <p><strong>Optimization:</strong> NCNN format for ARM</p>
+                    <p><strong>Memory:</strong> ~200MB</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Supported Objects -->
+        <div class="settings-card">
+            <h3>🎯 Supported Object Classes</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; font-size: 14px;">
+                <div><strong>People & Animals:</strong><br>person, cat, dog, bird, horse, sheep, cow, elephant, bear, zebra, giraffe</div>
+                <div><strong>Vehicles:</strong><br>bicycle, car, motorcycle, airplane, bus, train, truck, boat</div>
+                <div><strong>Objects:</strong><br>bottle, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange</div>
+                <div><strong>Furniture:</strong><br>chair, couch, potted plant, bed, dining table, toilet, TV, laptop, mouse, keyboard</div>
+                <div><strong>Sports:</strong><br>frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard</div>
+                <div><strong>Accessories:</strong><br>backpack, umbrella, handbag, tie, suitcase, cell phone, book, clock, scissors</div>
+            </div>
+        </div>
+        
+    {% endif %}
+</div>
+
+<script>
+    function updateSliderValue(slider, valueId) {
+        document.getElementById(valueId).textContent = slider.value;
+    }
+    
+    // Position slider values correctly
+    document.addEventListener('DOMContentLoaded', function() {
+        const sliders = document.querySelectorAll('.slider');
+        sliders.forEach(slider => {
+            const valueDisplay = slider.parentNode.querySelector('.slider-value');
+            if (valueDisplay) {
+                const updatePosition = () => {
+                    const percent = (slider.value - slider.min) / (slider.max - slider.min);
+                    const offset = percent * slider.offsetWidth;
+                    valueDisplay.style.left = offset + 'px';
+                };
+                
+                slider.addEventListener('input', updatePosition);
+                updatePosition(); // Initial position
+            }
+        });
+    });
+</script>
+
+{% endblock %}
