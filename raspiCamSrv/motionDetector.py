@@ -13,6 +13,13 @@ from email.message import EmailMessage
 import mimetypes
 import copy
 
+# Import YOLO11 motion detector
+try:
+    from raspiCamSrv.motionAlgoYOLO11 import MotionDetectYOLO11
+    YOLO11_AVAILABLE = True
+except ImportError:
+    YOLO11_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 class MotionEvent(object):
@@ -106,19 +113,26 @@ class MotionDetector():
             cls._instance = super(MotionDetector, cls).__new__(cls)
             cfg = CameraCfg()
             tc = cfg.triggerConfig
-            if tc.motionDetectAlgo in range(2, 5):
-                if CameraCfg().serverConfig.supportsExtMotionDetection == True:
-                    import raspiCamSrv.motionAlgoIB as mda
-                    if tc.motionDetectAlgo == 2:
-                        cls.mdAlgo = mda.MotionDetectFrameDiff()
-                    elif tc.motionDetectAlgo == 3:
-                        cls.mdAlgo = mda.MotionDetectOpticalFlow()
-                    else:
-                        cls.mdAlgo = mda.MotionDetectBgSubtract()
+        if tc.motionDetectAlgo in range(2, 5):
+            if CameraCfg().serverConfig.supportsExtMotionDetection == True:
+                import raspiCamSrv.motionAlgoIB as mda
+                if tc.motionDetectAlgo == 2:
+                    cls.mdAlgo = mda.MotionDetectFrameDiff()
+                elif tc.motionDetectAlgo == 3:
+                    cls.mdAlgo = mda.MotionDetectOpticalFlow()
                 else:
-                    tc.error = f"Error while initializing MotionDetector: algorithm {tc.motionDetectAlgo} currently not supported."
-                    tc.errorSource = "MotionDetector.__new__"
-                    logger.error("Error while initializing MotionDetector: algorithm %s currently not supported", tc.motionDetectAlg)
+                    cls.mdAlgo = mda.MotionDetectBgSubtract()
+            else:
+                tc.error = f"Error while initializing MotionDetector: algorithm {tc.motionDetectAlgo} currently not supported."
+                tc.errorSource = "MotionDetector.__new__"
+                logger.error("Error while initializing MotionDetector: algorithm %s currently not supported", tc.motionDetectAlg)
+        elif tc.motionDetectAlgo == 5:  # YOLO11
+            if YOLO11_AVAILABLE:
+                cls.mdAlgo = MotionDetectYOLO11()
+            else:
+                tc.error = "Error while initializing MotionDetector: YOLO11 not available. Install ultralytics package."
+                tc.errorSource = "MotionDetector.__new__"
+                logger.error("YOLO11 not available. Install ultralytics package.")
 
         return cls._instance
 
@@ -150,6 +164,14 @@ class MotionDetector():
                     cls.mdAlgo = mda.MotionDetectBgSubtract()
                     cls.mdAlgo.backSubModel = tc.backSubModel
                 ret = True
+        elif tc.motionDetectAlgo == 5:  # YOLO11
+            if YOLO11_AVAILABLE:
+                cls.mdAlgo = MotionDetectYOLO11()
+                ret = True
+            else:
+                tc.error = "YOLO11 not available. Install ultralytics package."
+                tc.errorSource = "MotionDetector.setAlgorithm"
+                logger.error("YOLO11 not available")
         return ret
 
     def get_testFrame1(self):
@@ -671,6 +693,13 @@ class MotionDetector():
                 cls.mdAlgo.backSubMod = tc.backSubModel
                 cls.mdAlgo.frameSize = CameraCfg().liveViewConfig.stream_size
                 cls.mdAlgo.framerate = 15
+            if tc.motionDetectAlgo == 5:  # YOLO11
+                cls.mdAlgo.confidence_threshold = getattr(tc, 'yoloConfidenceThreshold', 0.5)
+                cls.mdAlgo.iou_threshold = getattr(tc, 'yoloIouThreshold', 0.4)
+                cls.mdAlgo.motion_threshold = getattr(tc, 'yoloMotionThreshold', 50)
+                cls.mdAlgo.size_change_threshold = getattr(tc, 'yoloSizeChangeThreshold', 0.3)
+                cls.mdAlgo.frameSize = CameraCfg().liveViewConfig.stream_size
+                cls.mdAlgo.framerate = 10
             if sc.isTriggerTesting == True:
                 logger.debug("Thread %s: MotionDetector.startMotionDetection - Activating test mode", get_ident())
                 cls.mdAlgo.test = True

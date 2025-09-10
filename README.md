@@ -1,6 +1,8 @@
-# raspiCamSrv
+# raspiCamSrv + YOLO11 Integration
 
 The Raspberry Pi Camera Server (raspiCamSrv) is a web server which can be deployed on a Raspberry Pi device giving access to installed cameras and allows to control these.
+
+**🆕 NEW: YOLO11 Object Detection Integration!** This enhanced version includes state-of-the-art object detection and intelligent motion analysis using YOLO11, specifically optimized for Raspberry Pi 5.
 
 In addition, also a large variety of [GPIO-connected devices](./docs/SettingsDevices.md) can be controlled through the user interface or within the freely configurable [event handling infrastructure](./docs/Trigger.md) which integrates camera functions with devices.
 
@@ -13,10 +15,11 @@ Due to responsive layout from [W3.CSS](https://www.w3schools.com/w3css/), all mo
 
 ## Getting Started
 
+**🚀 For YOLO11 Enhanced Version:** See [YOLO11 Deployment Guide](./YOLO11_DEPLOYMENT_GUIDE.md) for complete Pi 5 setup instructions.
+
 - For [System Setup](#setup--getting-started) or [installation procedure](#raspicamsrv-installation), see below.<br>Alternatively, consider [running raspiCamSrv as Docker container](./docs/SetupDocker.md).
 
 - If you need to be independent from an existing Wi-Fi or cabled connection, see [Setup of Raspberry Pi Zero as Standalone System](./docs/bp_PiZero_Standalone.md)
-
 
 - For release history and updating an existing system, see [Release Notes](./docs/ReleaseNotes.md).    
 
@@ -45,7 +48,7 @@ The non-active camera stream and photo can be accessed through endpoints ```http
 - Besides [Trigger](./docs/TriggerTriggers.md)-based [Action](./docs/TriggerActions.md) execution, actions can also be envoked through flexibly configurable [Action Buttons](./docs/ConsoleActionButtons.md).
 - [Event viewer](./docs/TriggerEventViewer.md) with calendar overview
 - Notification on captured events by e-Mail (see [Notification](./docs/TriggerNotification.md))
-- [Extended Motion Capturing Algorithms](./docs/TriggerMotion.md) are available, including [Frame Differencing](./docs/TriggerMotion.md#test-for-frame-differencing-algorithm), [Optical Flow](./docs/TriggerMotion.md#test-for-optical-flow-algorithm) and [Background Subtraction](./docs/TriggerMotion.md#test-for-background-subtraction-algorithm)
+- [Extended Motion Capturing Algorithms](./docs/TriggerMotion.md) are available, including [Frame Differencing](./docs/TriggerMotion.md#test-for-frame-differencing-algorithm), [Optical Flow](./docs/TriggerMotion.md#test-for-optical-flow-algorithm), [Background Subtraction](./docs/TriggerMotion.md#test-for-background-subtraction-algorithm), and **🆕 YOLO11 Object Detection**
 - The [Extended Motion Capturing Algorithms](./docs/TriggerMotion.md) can be run in a testing mode, showing live views of intermediate image processing results which can help for a better understanding of the algorithms and adjustment of their variable parameters.
 - For cameras with focus control (camera 3), it is also possible to graphically draw autofocus windows and trigger the autofocus to measure the LensPosition which is translated into a focal distance (see [Focus handling](docs/FocusHandling.md)).
 - For zooming, the intended image section can be [drawn graphically](docs/ZoomPan.md#graphically-setting-the-zoom-window) on the live stream area.
