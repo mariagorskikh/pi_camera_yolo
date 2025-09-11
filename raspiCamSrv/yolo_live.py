@@ -228,6 +228,8 @@ def index():
 @login_required
 def video_feed():
     """Video streaming route with YOLO11 detection"""
+    logger.info("🎥 YOLO video_feed route accessed!")
+    print("🎥 YOLO video_feed route accessed!")
     return Response(generate_yolo_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @bp.route("/settings", methods=["GET", "POST"])
