@@ -235,65 +235,35 @@ def stats():
     return jsonify(yolo_detector.detection_stats)
 
 def generate_yolo_frames():
-    """Generate frames with YOLO11 detection - ALWAYS shows video feed"""
+    """Generate frames with YOLO11 detection - Simplified like Live page"""
     camera = Camera()
-    
-    # Ensure live stream is started
-    from raspiCamSrv.camCfg import CameraCfg
-    cfg = CameraCfg()
-    if not cfg.serverConfig.isLiveStream:
-        camera.startLiveStream()
-        time.sleep(1)  # Give camera time to start
-    
+    camera.startLiveStream()
     logger.info("YOLO video stream started")
     
+    # Initial boundary (like the working Live page)
+    yield b'--frame\r\n'
+    
     while True:
-        try:
-            # Get frame from camera using the same method as Live page
-            frame_bytes = camera.get_frame()
-            if frame_bytes is None:
-                time.sleep(0.05)  # Shorter sleep for better responsiveness
-                continue
+        frame_bytes = camera.get_frame()
+        if frame_bytes:
+            # If YOLO is available and working, try to add annotations
+            if YOLO_AVAILABLE:
+                try:
+                    # Convert frame for YOLO processing
+                    frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
+                    frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+                    
+                    if frame is not None:
+                        # Try YOLO detection
+                        annotated_frame, detections = yolo_detector.detect_and_annotate(frame)
+                        
+                        # Re-encode annotated frame
+                        ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                        if ret:
+                            frame_bytes = buffer.tobytes()
+                except Exception as e:
+                    logger.debug(f"YOLO processing error, using raw frame: {e}")
+                    # On any error, just use the raw frame
             
-            # Convert MJPEG bytes to numpy array
-            if isinstance(frame_bytes, bytes):
-                # Decode MJPEG frame to numpy array
-                frame_array = np.frombuffer(frame_bytes, dtype=np.uint8)
-                frame = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
-            else:
-                frame = frame_bytes
-            
-            if frame is None:
-                time.sleep(0.05)
-                continue
-            
-            # ALWAYS run YOLO11 detection and annotation (even if no objects detected)
-            annotated_frame, detections = yolo_detector.detect_and_annotate(frame)
-            
-            # ALWAYS encode and yield frame (never skip)
-            ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-            if ret:
-                frame_bytes_out = buffer.tobytes()
-                
-                # Yield frame in multipart format
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes_out + b'\r\n')
-            else:
-                logger.error("Failed to encode frame")
-                time.sleep(0.05)
-                   
-        except Exception as e:
-            logger.error(f"Error in YOLO frame generation: {e}")
-            # Even on error, try to show a basic frame
-            try:
-                # Create a simple error frame
-                error_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-                cv2.putText(error_frame, "YOLO11 Stream Error", (200, 240), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-                ret, buffer = cv2.imencode('.jpg', error_frame)
-                if ret:
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-            except:
-                pass
-            time.sleep(0.1)
+            # Yield frame (exactly like the working Live page)
+            yield b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n--frame\r\n'

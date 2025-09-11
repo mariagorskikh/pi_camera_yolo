@@ -152,11 +152,12 @@
         </div>
     {% endif %}
     
+    <!-- Live Video Stream - ALWAYS show video feed -->
+    <div class="video-container">
+        <img src="{{ url_for('yolo_live.video_feed') }}" class="video-stream" alt="YOLO11 Live Detection">
+    </div>
+    
     {% if yolo_available %}
-        <!-- Live Video Stream -->
-        <div class="video-container">
-            <img src="{{ url_for('yolo_live.video_feed') }}" class="video-stream" alt="YOLO11 Live Detection">
-        </div>
         
         <!-- Real-time Statistics -->
         <div class="stats-panel">
