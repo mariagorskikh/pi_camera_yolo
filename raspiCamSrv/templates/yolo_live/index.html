@@ -240,21 +240,37 @@
 <script>
     // Real-time statistics updates
     function updateStats() {
+        // Only update stats if YOLO is available and elements exist
+        if (!{{ yolo_available|lower }}) {
+            return;
+        }
+        
+        const objectsCount = document.getElementById('objects-count');
+        const fpsCount = document.getElementById('fps-count');
+        const frameCount = document.getElementById('frame-count');
+        
+        if (!objectsCount || !fpsCount || !frameCount) {
+            return;
+        }
+        
         fetch('{{ url_for("yolo_live.stats") }}')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('objects-count').textContent = data.objects_detected || 0;
-                document.getElementById('fps-count').textContent = (data.fps || 0).toFixed(1);
-                document.getElementById('frame-count').textContent = data.frame_count || 0;
+                objectsCount.textContent = data.objects_detected || 0;
+                fpsCount.textContent = (data.fps || 0).toFixed(1);
+                frameCount.textContent = data.frame_count || 0;
             })
             .catch(error => console.log('Stats update error:', error));
     }
     
+    // Only start stats updates if YOLO is available
+    {% if yolo_available %}
     // Update stats every 2 seconds
     setInterval(updateStats, 2000);
     
     // Initial stats load
     updateStats();
+    {% endif %}
     
     function toggleFullscreen() {
         const videoElement = document.querySelector('.video-stream');
