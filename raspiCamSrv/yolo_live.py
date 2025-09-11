@@ -13,6 +13,10 @@ import time
 import cv2
 import numpy as np
 
+import sys
+print(f"🔍 Flask Python executable: {sys.executable}")
+print(f"🔍 Flask Python path: {sys.path[:3]}...")
+
 try:
     from ultralytics import YOLO
     YOLO_AVAILABLE = True
@@ -20,6 +24,16 @@ try:
 except ImportError as e:
     YOLO_AVAILABLE = False
     print(f"❌ YOLO_AVAILABLE = False (ImportError: {e})")
+    print(f"🔍 sys.path when import failed: {sys.path}")
+    
+    # Try to manually find ultralytics
+    import os
+    for path in sys.path:
+        ultralytics_path = os.path.join(path, 'ultralytics')
+        if os.path.exists(ultralytics_path):
+            print(f"🔍 Found ultralytics at: {ultralytics_path}")
+        else:
+            print(f"🔍 No ultralytics at: {ultralytics_path}")
 
 logger = logging.getLogger(__name__)
 
