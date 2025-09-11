@@ -16,8 +16,10 @@ import numpy as np
 try:
     from ultralytics import YOLO
     YOLO_AVAILABLE = True
-except ImportError:
+    print(f"✅ YOLO_AVAILABLE = True (ultralytics {YOLO.__module__})")
+except ImportError as e:
     YOLO_AVAILABLE = False
+    print(f"❌ YOLO_AVAILABLE = False (ImportError: {e})")
 
 logger = logging.getLogger(__name__)
 
