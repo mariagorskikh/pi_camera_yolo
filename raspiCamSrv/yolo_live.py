@@ -56,33 +56,21 @@ class YOLOLiveDetector:
         }
     
     def initialize_model(self, model_name="yolo11n.pt"):
-        """Initialize YOLO11 model - prefers NCNN format for better Pi performance"""
+        """Initialize YOLO11 model - Using PyTorch for immediate startup"""
         if not YOLO_AVAILABLE:
             logger.error("YOLO11 not available")
             return False
         
         try:
-            # Try NCNN format first (optimized for ARM/Pi)
-            ncnn_model = model_name.replace('.pt', '_ncnn_model')
-            try:
-                self.model = YOLO(ncnn_model)
-                logger.info(f"YOLO11 NCNN model loaded: {ncnn_model}")
-            except:
-                # Fall back to PyTorch model
-                self.model = YOLO(model_name)
-                logger.info(f"YOLO11 PyTorch model loaded: {model_name}")
-                
-                # Try to export NCNN for next time
-                try:
-                    self.model.export(format='ncnn')
-                    logger.info("NCNN model exported for future use")
-                except Exception as export_error:
-                    logger.debug(f"NCNN export failed: {export_error}")
+            # Use PyTorch model directly (NCNN causes blocking downloads)
+            self.model = YOLO(model_name)
+            logger.info(f"YOLO11 PyTorch model loaded: {model_name}")
             
             # Test with dummy frame
             test_frame = np.zeros((640, 640, 3), dtype=np.uint8)
             results = self.model(test_frame, verbose=False)
             self.model_initialized = True
+            logger.info("✅ YOLO11 model initialization complete!")
             return True
         except Exception as e:
             logger.error(f"Failed to initialize YOLO11: {e}")
